@@ -1,0 +1,19 @@
+---
+title: "Experiments"
+---
+
+## Experiment Index
+
+Each entry links to a full write-up with code, results, and analysis.
+
+| # | Experiment | Date | Models | Status |
+|---|-----------|------|--------|--------|
+| 1 | *Template: Basic prompting* | - | Phi-3 Mini | Draft |
+
+## How to Add an Experiment
+
+1. Create a new notebook in `notebooks/`
+2. Run your experiment using the `helpers.py` functions
+3. Convert to a Quarto page: `quarto render notebooks/your_experiment.ipynb`
+4. Add a link to the table above
+5. Push to GitHub -- the site auto-publishes via GitHub Pages

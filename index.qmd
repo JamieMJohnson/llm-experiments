@@ -1,0 +1,21 @@
+---
+title: "LLM Experiments"
+---
+
+Research findings from experiments with open-weight language models.
+
+## About
+
+This site documents experiments probing the behaviour of open-weight LLMs (Phi-3, Llama 3, Mistral, and others). Each experiment is run locally via [Ollama](https://ollama.com/) or via hosted APIs, with full code and data published for reproducibility.
+
+## Recent Experiments
+
+*No experiments published yet. Check back soon.*
+
+## Setup
+
+All experiments can be reproduced using the code in the [GitHub repository](https://github.com/JamieMJohnson/llm-experiments). You'll need:
+
+- [Ollama](https://ollama.com/) for local models
+- A free [Together AI](https://api.together.xyz/signup) API key for hosted models
+- Python 3.8+ with Jupyter

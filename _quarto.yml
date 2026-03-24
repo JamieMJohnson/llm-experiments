@@ -1,0 +1,19 @@
+project:
+  type: website
+  output-dir: _site
+
+website:
+  title: "LLM Experiments"
+  description: "Open-weight LLM research and findings"
+  navbar:
+    left:
+      - href: index.qmd
+        text: Home
+      - href: experiments.qmd
+        text: Experiments
+
+format:
+  html:
+    theme: cosmo
+    toc: true
+    code-fold: true
