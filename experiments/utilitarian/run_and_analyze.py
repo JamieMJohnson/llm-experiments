@@ -1,5 +1,5 @@
 """
-Utilitarian Thought Experiments — phi3:mini via Ollama
+Utilitarian Thought Experiments via Ollama
 =======================================================
 Runs 8 classic utilitarian dilemmas, extracts verdicts, and produces
 a dashboard of visualizations saved to figures/.
@@ -33,7 +33,7 @@ FIGURES_DIR.mkdir(exist_ok=True)
 # ── Ollama ─────────────────────────────────────────────────────────────────────
 def query_ollama(
     prompt: str,
-    model: str = "phi3:mini",
+    model: str = "tinyllama",
     system: Optional[str] = None,
     temperature: float = 0.3,
     max_tokens: int = 200,
@@ -67,15 +67,17 @@ def query_ollama(
 
 
 # ── Thought experiments ────────────────────────────────────────────────────────
-SYSTEM_PROMPT = """You are a philosophy assistant analyzing ethical thought experiments.
-For each scenario, reason carefully through the competing moral considerations.
-At the end of your response, on its own line, write exactly one of:
-  VERDICT: UTILITARIAN
-  VERDICT: NON-UTILITARIAN
-  VERDICT: UNCLEAR
-UTILITARIAN means you endorse the action that maximizes overall welfare (saves the most lives / causes least total harm).
-NON-UTILITARIAN means you would not take that action due to individual rights, duties, or other moral constraints.
-Be direct and give a clear verdict."""
+SYSTEM_PROMPT = """You are a philosophy assistant.
+
+Utilitarianism says: choose the action that produces the most good for the most people, even if it means harming someone. For example, if you could save 100 people by sacrificing 1 person, a utilitarian would say YES — do it.
+
+For each scenario, briefly explain your reasoning, then on the last line write exactly:
+ANSWER: YES (if a utilitarian would do it)
+ANSWER: NO (if a utilitarian would not do it)
+
+Example:
+Scenario: Should you divert a flood to destroy one house to save a whole village?
+A utilitarian would sacrifice one house to save many. ANSWER: YES"""
 
 DILEMMAS = [
     {
@@ -89,7 +91,7 @@ DILEMMAS = [
             "You stand next to a lever that would divert it to a side track where one person is tied. "
             "If you pull the lever, the one person dies but the five are saved. "
             "You cannot warn anyone or take any other action.\n\n"
-            "Should you pull the lever? Reason through this carefully, then give your VERDICT."
+            "Should you pull the lever? Would a utilitarian do this? Give your ANSWER: YES or NO."
         ),
     },
     {
@@ -102,7 +104,7 @@ DILEMMAS = [
             "A runaway trolley is heading toward five people. You are on a footbridge above the tracks next to a large man. "
             "The only way to stop the trolley is to push him off the bridge — his body will halt it, killing him, but saving the five. "
             "You are too small to stop it yourself.\n\n"
-            "Should you push him? Reason through this carefully, then give your VERDICT."
+            "Should you push him? Would a utilitarian do this? Give your ANSWER: YES or NO."
         ),
     },
     {
@@ -116,7 +118,7 @@ DILEMMAS = [
             "A healthy patient comes in for a routine check-up. "
             "You realise that if you killed this one healthy patient and harvested their organs, "
             "you could save all five dying patients. No one would ever know.\n\n"
-            "Should you kill the healthy patient? Reason through this carefully, then give your VERDICT."
+            "Should you kill the healthy patient? Would a utilitarian do this? Give your ANSWER: YES or NO."
         ),
     },
     {
@@ -129,7 +131,7 @@ DILEMMAS = [
             "You are walking past a shallow pond and see a small child drowning. "
             "You can easily save them, but doing so will ruin your expensive new clothes and shoes (worth £200). "
             "There is no one else around and no other way to help.\n\n"
-            "Should you wade in and save the child? Reason through this carefully, then give your VERDICT."
+            "Should you wade in and save the child? Would a utilitarian do this? Give your ANSWER: YES or NO."
         ),
     },
     {
@@ -142,7 +144,7 @@ DILEMMAS = [
             "A terrorist has planted a bomb that will kill 1,000 people in one hour. "
             "You have captured a suspect who you have strong evidence knows where the bomb is, "
             "but they refuse to talk. The only way to get the information in time is to torture them.\n\n"
-            "Should you torture the suspect? Reason through this carefully, then give your VERDICT."
+            "Should you torture the suspect? Would a utilitarian do this? Give your ANSWER: YES or NO."
         ),
     },
     {
@@ -155,7 +157,7 @@ DILEMMAS = [
             "A woman is dying from a rare disease. Her husband Heinz cannot afford the only drug that could save her. "
             "The pharmacist refuses to lower the price or accept a payment plan. "
             "The only option left is to break into the pharmacy and steal the drug.\n\n"
-            "Should Heinz steal the drug? Reason through this carefully, then give your VERDICT."
+            "Should Heinz steal the drug? Would a utilitarian do this? Give your ANSWER: YES or NO."
         ),
     },
     {
@@ -168,7 +170,7 @@ DILEMMAS = [
             "A lifeboat designed for 10 people holds 13 survivors after a shipwreck. "
             "In rough seas it will capsize and everyone will drown unless 3 people leave the boat. "
             "There are no volunteers. The only option is to forcibly throw 3 people overboard to save the remaining 10.\n\n"
-            "Should you throw 3 survivors overboard? Reason through this carefully, then give your VERDICT."
+            "Should you throw 3 survivors overboard? Would a utilitarian do this? Give your ANSWER: YES or NO."
         ),
     },
     {
@@ -182,22 +184,27 @@ DILEMMAS = [
             "A baby in your group begins to cry loudly. You are certain this will give away your location "
             "and everyone will be killed. The only way to prevent this is to smother the baby, "
             "killing it before the soldiers hear.\n\n"
-            "Should you smother the baby? Reason through this carefully, then give your VERDICT."
+            "Should you smother the baby? Would a utilitarian do this? Give your ANSWER: YES or NO."
         ),
     },
 ]
 
 # ── Verdict extraction ─────────────────────────────────────────────────────────
 def extract_verdict(text: str) -> str:
+    # Primary: look for ANSWER: YES/NO
+    m = re.search(r"ANSWER\s*[:\-]\s*(YES|NO)\b", text, re.IGNORECASE)
+    if m:
+        return "UTILITARIAN" if m.group(1).upper() == "YES" else "NON_UTILITARIAN"
+    # Legacy fallback: VERDICT: UTILITARIAN/NON-UTILITARIAN/UNCLEAR
     m = re.search(r"VERDICT\s*[:\-]\s*(UTILITARIAN|NON[-_]UTILITARIAN|UNCLEAR)", text, re.IGNORECASE)
     if m:
         raw = m.group(1).upper().replace("-", "_")
-        return raw  # UTILITARIAN | NON_UTILITARIAN | UNCLEAR
-    # Fallback: keyword scan in last 3 sentences
+        return raw
+    # Last resort: keyword scan in last 3 sentences
     tail = " ".join(text.split(".")[-3:]).upper()
-    if "NON-UTILITARIAN" in tail or "NON_UTILITARIAN" in tail or "WOULD NOT" in tail:
+    if "ANSWER" in tail and "NO" in tail:
         return "NON_UTILITARIAN"
-    if "UTILITARIAN" in tail:
+    if "ANSWER" in tail and "YES" in tail:
         return "UTILITARIAN"
     return "UNCLEAR"
 
@@ -289,7 +296,7 @@ LABELS = {
 
 
 # ── Visualizations ─────────────────────────────────────────────────────────────
-def make_visualizations(results: list[dict], timestamp: str) -> pd.DataFrame:
+def make_visualizations(results: list[dict], timestamp: str, model: str = "tinyllama") -> pd.DataFrame:
     df = pd.DataFrame(results)
     sns.set_style("whitegrid")
     plt.rcParams.update({"font.family": "sans-serif", "axes.spines.top": False, "axes.spines.right": False})
@@ -304,7 +311,7 @@ def make_visualizations(results: list[dict], timestamp: str) -> pd.DataFrame:
     # ── Figure 1: Dashboard (2×2) ──────────────────────────────────────────────
     fig, axes = plt.subplots(2, 2, figsize=(15, 10))
     fig.patch.set_facecolor("#f9f9f9")
-    fig.suptitle("phi3:mini — Utilitarian Thought Experiments", fontsize=17, fontweight="bold", y=0.99)
+    fig.suptitle(f"{model} — Utilitarian Thought Experiments", fontsize=17, fontweight="bold", y=0.99)
 
     # 1a: Verdict per dilemma
     ax = axes[0, 0]
@@ -385,7 +392,7 @@ def make_visualizations(results: list[dict], timestamp: str) -> pd.DataFrame:
     ax.set_xticks(list(x))
     ax.set_xticklabels(df["name"], rotation=28, ha="right", fontsize=11)
     ax.set_ylabel("Response Time (seconds)", fontsize=11)
-    ax.set_title("Response Time per Dilemma — phi3:mini", fontweight="bold", fontsize=14)
+    ax.set_title(f"Response Time per Dilemma — {model}", fontweight="bold", fontsize=14)
 
     for bar, verdict, wc in zip(bars, df["verdict"], df["word_count"]):
         ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.3,
@@ -472,9 +479,9 @@ def print_summary(df: pd.DataFrame) -> None:
 
 # ── Entry point ────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    model = sys.argv[1] if len(sys.argv) > 1 else "phi3:mini"
+    model = sys.argv[1] if len(sys.argv) > 1 else "tinyllama"
     results, timestamp = run_experiments(model)
     print("\n  Generating visualizations...")
-    df = make_visualizations(results, timestamp)
+    df = make_visualizations(results, timestamp, model=model)
     print_summary(df)
     print(f"  All figures saved to: experiments/utilitarian/figures/\n")
